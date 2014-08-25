@@ -44,6 +44,7 @@ def displacement_plot(df):
         return mydf
     centered = df.groupby('Object').apply(center_transform)
     centered['cY'] = -centered['cY']
+    centered['Object'] = centered['Object'].map(str)
 
     g = gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) + gg.geom_line()
 
