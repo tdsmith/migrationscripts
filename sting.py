@@ -14,8 +14,9 @@ import ggplot as gg
 def read_mtrack2(filename):
     with open(filename) as f:
         buf = f.readlines()
-    # there's an extra table at the end that we don't care about
-    buf = buf[:buf.index('\n')]
+    if '\n' in buf:
+    	# there might be an extra table at the end that we don't care about
+    	buf = buf[:buf.index('\n')]
     buf = ''.join(buf)
     iobuf = StringIO(buf)
     # row 0 is headers and data starts on row 2 so skip row 1
