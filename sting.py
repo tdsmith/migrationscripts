@@ -23,9 +23,6 @@ def read_mtrack2(filename):
     df = pd.read_csv(iobuf, sep='\t', skiprows=[1])
     # df.replace(to_replace=' ', value=float('NaN'), inplace=True)
     df = df.convert_objects(convert_numeric=True)
-    return df
-
-def displacement_plot(df):
     # throw out flag columns
     df = df[df.columns[[not i.startswith('Flag') for i in df.columns]]]
     # fill NA's backwards and then forwards
@@ -37,23 +34,41 @@ def displacement_plot(df):
     melted['Object'] = melted['variable'].apply(lambda x: int(x[1:]))
     df = melted.groupby(['Object', 'Frame', 'Axis']).sum().unstack()['value']
     df = df.reset_index()
-    # df.to_csv('intermediate.csv', index_label=False)
+    return df
+
+def read_manual_track(filename):
+    df = pd.read_csv(filename, sep='\t', encoding='mac-roman')
+    df.rename(columns={u'Track n°': 'Object',
+                       u'Slice n°': 'Frame'},
+              inplace=True)
+    for col in ['Object', 'Frame']:
+        df[col] = df[col].astype(int)
+    print df
+    return df
+
+def center(df):
     def center_transform(x):
-        mydf = x.copy()
-        mydf['cX'] = x['X'] - x['X'].iloc[0]
-        mydf['cY'] = x['Y'] - x['Y'].iloc[0]
-        return mydf
+        x['cX'] = x['X'] - x['X'].iloc[0]
+        x['cY'] = x['Y'] - x['Y'].iloc[0]
+        return x
     centered = df.groupby('Object').apply(center_transform)
     centered['cY'] = -centered['cY']
+    return centered
+
+def displacement_plot(centered):
     centered['Object'] = centered['Object'].map(str)
-
-    g = gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) + gg.geom_line()
-
+    centered = centered.sort(['Frame', 'Object'])
+    g = gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) + gg.geom_path()
     return g
 
 def save_plot(tsv_in, png_out):
-    df = read_mtrack2(tsv_in)
-    g = displacement_plot(df)
+    try:
+        df = read_mtrack2(tsv_in)
+    except Exception:
+        df = read_manual_track(tsv_in)
+    centered = center(df)
+    centered.to_csv(tsv_in + '.centered')
+    g = displacement_plot(centered)
     gg.ggsave(g, png_out)
 
 if __name__ == '__main__':
