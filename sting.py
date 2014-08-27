@@ -86,6 +86,7 @@ def displacement_plot(centered, limits = None):
 def stats(df):
     def segment_lengths(obj):
         obj['SegmentLength'] = obj['cX']
+        # use array() to prevent index alignment
         obj.ix[1:, 'SegmentLength'] = sqrt((obj['X'][1:] - array(obj['X'][:-1]))**2 +
                                            (obj['Y'][1:] - array(obj['Y'][:-1]))**2)
         return obj
