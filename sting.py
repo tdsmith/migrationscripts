@@ -47,7 +47,6 @@ def read_manual_track(filename):
               inplace=True)
     for col in ['Object', 'Frame']:
         df[col] = df[col].astype(int)
-    print df
     return df
 
 def read_mtrackj_mdf(filename):
