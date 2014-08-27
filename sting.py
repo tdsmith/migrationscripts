@@ -10,6 +10,7 @@
 import pandas as pd
 from StringIO import StringIO
 import ggplot as gg
+import codecs
 
 def read_mtrack2(filename):
     with open(filename) as f:
@@ -46,6 +47,23 @@ def read_manual_track(filename):
     print df
     return df
 
+def read_mtrackj_mdf(filename):
+    f = codecs.open(filename, 'r', 'mac-roman')
+    if not f.readline().startswith("MTrackJ"):
+        raise ValueError("File {} is not in MTrackJ MDF format.".format(filename))
+    this_track = None
+    x, y, obj, frame = [], [], [], []
+    for line in f:
+        if line.startswith('Track'):
+            this_track = int(float(line.split()[1]))
+        elif line.startswith('Point'):
+            tmp = line.split()
+            obj.append(this_track)
+            x.append(float(tmp[2]))
+            y.append(float(tmp[3]))
+            frame.append(int(float(tmp[5])))
+    return pd.DataFrame({'Object': obj, 'Frame': frame, 'X': x, 'Y': y})
+
 def center(df):
     def center_transform(x):
         x['cX'] = x['X'] - x['X'].iloc[0]
@@ -58,14 +76,18 @@ def center(df):
 def displacement_plot(centered):
     centered['Object'] = centered['Object'].map(str)
     centered = centered.sort(['Frame', 'Object'])
-    g = gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) + gg.geom_path()
+    g = gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) + gg.geom_path() + gg.theme_bw()
     return g
 
 def save_plot(tsv_in, png_out):
+    # there has to be a better pattern for this
     try:
-        df = read_mtrack2(tsv_in)
-    except Exception:
-        df = read_manual_track(tsv_in)
+        df = read_mtrackj_mdf(tsv_in)
+    except ValueError as e:
+        try:
+            df = read_mtrack2(tsv_in)
+        except Exception:
+            df = read_manual_track(tsv_in)
     centered = center(df)
     centered.to_csv(tsv_in + '.centered')
     g = displacement_plot(centered)
