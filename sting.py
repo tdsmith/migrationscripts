@@ -11,6 +11,9 @@ import pandas as pd
 from StringIO import StringIO
 import ggplot as gg
 import codecs
+import argparse
+from numpy import sqrt, sum, array
+import sys
 
 def read_mtrack2(filename):
     with open(filename) as f:
@@ -73,27 +76,55 @@ def center(df):
     centered['cY'] = -centered['cY']
     return centered
 
-def displacement_plot(centered):
+def displacement_plot(centered, limits = None):
     centered['Object'] = centered['Object'].map(str)
     centered = centered.sort(['Frame', 'Object'])
     g = gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) + gg.geom_path() + gg.theme_bw()
+    if limits: g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     return g
 
-def save_plot(tsv_in, png_out):
-    # there has to be a better pattern for this
-    try:
-        df = read_mtrackj_mdf(tsv_in)
-    except ValueError as e:
+def stats(df):
+    def segment_lengths(obj):
+        obj['SegmentLength'] = obj['cX']
+        obj.ix[1:, 'SegmentLength'] = sqrt((obj['X'][1:] - array(obj['X'][:-1]))**2 +
+                                           (obj['Y'][1:] - array(obj['Y'][:-1]))**2)
+        return obj
+    rms = lambda x: sqrt(sum(x**2))
+    df['Distance'] = sqrt(df['cX']**2 + df['cY']**2)
+    df = df.groupby('Object').apply(segment_lengths)
+    per_object = df.groupby('Object')
+    rms_dx = per_object['Distance'].aggregate(rms)
+    return pd.DataFrame({'median_rms_dx': [rms_dx.median()],
+                         'mean_rms_dx': [rms_dx.mean()],
+                         'n': [len(per_object)],
+                         'mean_path_length': [per_object['SegmentLength'].sum().mean()],
+                         'median_path_length': [per_object['SegmentLength'].sum().median()]})
+
+def main():
+    parser = argparse.ArgumentParser(description="Draw displacement plots.")
+    parser.add_argument('--limits', type=int, help="Maximum extent of the axes.")
+    parser.add_argument('--no-plots', action='store_true', help="Don't save plots.")
+    parser.add_argument('infile', nargs='+', help="File(s) to process.")
+    args = parser.parse_args()
+    all_dfs = []
+    for filename in args.infile:
+        # there has to be a better pattern for this
         try:
-            df = read_mtrack2(tsv_in)
-        except Exception:
-            df = read_manual_track(tsv_in)
-    centered = center(df)
-    centered.to_csv(tsv_in + '.centered')
-    g = displacement_plot(centered)
-    gg.ggsave(g, png_out)
+            df = read_mtrackj_mdf(filename)
+        except ValueError as e:
+            try:
+                df = read_mtrack2(filename)
+            except Exception:
+                df = read_manual_track(filename)
+        centered = center(df)
+        centered.to_csv(filename + '.centered')
+        if not args.no_plots:
+            g = displacement_plot(centered, limits = args.limits)
+            gg.ggsave(g, filename + '.png')
+        centered['filename'] = filename
+        all_dfs.append(centered)
+    mega_df = pd.concat(all_dfs, ignore_index=True)
+    mega_df.groupby('filename', sort=False).apply(stats).to_csv(sys.stdout)
 
 if __name__ == '__main__':
-    import sys
-    save_plot(sys.argv[1], sys.argv[1] + '.png')
-
+    main()
