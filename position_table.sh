@@ -1,2 +1,2 @@
 #!/bin/bash
-jq -c '[.POSITIONS[] | .LABEL]|. as $labels | range(0; length) as $idx | [$idx+1, $labels[$idx]]'
+jq -r '[.POSITIONS[] | .LABEL]|. as $labels | range(0; length) as $idx | @text "\($idx+1), \($labels[$idx])"'
