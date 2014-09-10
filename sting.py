@@ -94,16 +94,22 @@ def stats(df):
     df = df.groupby('Object').apply(segment_lengths)
     per_object = df.groupby('Object')
     rms_dx = per_object['Distance'].aggregate(rms)
-    return pd.DataFrame({'median_rms_dx': [rms_dx.median()],
-                         'mean_rms_dx': [rms_dx.mean()],
-                         'n': [len(per_object)],
-                         'mean_path_length': [per_object['SegmentLength'].sum().mean()],
-                         'median_path_length': [per_object['SegmentLength'].sum().median()]})
+    return pd.DataFrame({'rms_distance': rms_dx,
+                         'path_length': per_object['SegmentLength'].sum()})
+
+def summary(df):
+    return pd.DataFrame({'filename': [df['filename'].iloc[0]],
+                         'median_rms_dx': [df['rms_distance'].median()],
+                         'mean_rms_dx': [df['rms_distance'].mean()],
+                         'n': [len(df)],
+                         'mean_path_length': [df['path_length'].mean()],
+                         'median_path_length': [df['path_length'].median()]})
 
 def main():
     parser = argparse.ArgumentParser(description="Draw displacement plots.")
     parser.add_argument('--limits', type=int, help="Maximum extent of the axes.")
     parser.add_argument('--no-plots', action='store_true', help="Don't save plots.")
+    parser.add_argument('--summary', help='Save summary stats by file')
     parser.add_argument('infile', nargs='+', help="File(s) to process.")
     args = parser.parse_args()
     all_dfs = []
@@ -124,7 +130,11 @@ def main():
         centered['filename'] = filename
         all_dfs.append(centered)
     mega_df = pd.concat(all_dfs, ignore_index=True)
-    mega_df.groupby('filename', sort=False).apply(stats).to_csv(sys.stdout)
+    obj_stats = mega_df.groupby('filename', sort=False).apply(stats).reset_index()
+    summary_by_file = obj_stats.groupby('filename').apply(summary)
+    if args.summary:
+        summary_by_file.to_csv(args.summary, index=False)
+    obj_stats.to_csv(sys.stdout, index=False)
 
 if __name__ == '__main__':
     main()
