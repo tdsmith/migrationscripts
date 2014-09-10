@@ -94,16 +94,20 @@ def stats(df):
     df = df.groupby('Object').apply(segment_lengths)
     per_object = df.groupby('Object')
     rms_dx = per_object['Distance'].aggregate(rms)
-    return pd.DataFrame({'rms_distance': rms_dx,
+    max_dx = per_object['Distance'].max()
+    return pd.DataFrame({'rms_displacement': rms_dx,
+                         'max_displacement': max_dx,
                          'path_length': per_object['SegmentLength'].sum()})
 
 def summary(df):
     return pd.DataFrame({'filename': [df['filename'].iloc[0]],
-                         'median_rms_dx': [df['rms_distance'].median()],
-                         'mean_rms_dx': [df['rms_distance'].mean()],
+                         'median_rms_dx': [df['rms_displacement'].median()],
+                         'mean_rms_dx': [df['rms_displacement'].mean()],
                          'n': [len(df)],
                          'mean_path_length': [df['path_length'].mean()],
-                         'median_path_length': [df['path_length'].median()]})
+                         'median_path_length': [df['path_length'].median()],
+                         'mean_max_dx': [df['max_displacement'].mean()],
+                         'median_max_dx': [df['max_displacement'].median()]})
 
 def main():
     parser = argparse.ArgumentParser(description="Draw displacement plots.")
