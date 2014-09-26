@@ -114,6 +114,7 @@ def main():
     parser.add_argument('--limits', type=int, help="Maximum extent of the axes.")
     parser.add_argument('--no-plots', action='store_true', help="Don't save plots.")
     parser.add_argument('--summary', help='Save summary stats by file')
+    parser.add_argument('--imagetype', '-i', default='png', help="Extension to use for plots (defaults to png).")
     parser.add_argument('infile', nargs='+', help="File(s) to process.")
     args = parser.parse_args()
     all_dfs = []
@@ -129,8 +130,8 @@ def main():
         centered = center(df)
         centered.to_csv(filename + '.centered')
         if not args.no_plots:
-            g = displacement_plot(centered, limits = args.limits)
-            gg.ggsave(g, filename + '.png')
+            g = displacement_plot(centered, limits = args.limits) + gg.theme(axis_text=gg.element_text(size=8))
+            gg.ggsave(g, '{}.{}'.format(filename, args.imagetype), width=2.5, height=1.81, units='in')
         centered['filename'] = filename
         all_dfs.append(centered)
     mega_df = pd.concat(all_dfs, ignore_index=True)
