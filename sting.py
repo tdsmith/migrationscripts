@@ -78,7 +78,9 @@ def center(df):
 def displacement_plot(centered, limits = None):
     centered['Object'] = centered['Object'].map(str)
     centered = centered.sort(['Frame', 'Object'])
-    g = gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) + gg.geom_path() + gg.theme_bw()
+    g = (gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) +
+         gg.geom_path(size=0.3) +
+         gg.theme_bw())
     if limits: g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     return g
 
