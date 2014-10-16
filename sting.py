@@ -97,9 +97,14 @@ def stats(df):
     per_object = df.groupby('Object')
     rms_dx = per_object['Distance'].aggregate(rms)
     max_dx = per_object['Distance'].max()
+    path_length = per_object['SegmentLength'].sum()
+    n_points = per_object['SegmentLength'].aggregate(len)
+    velocity = path_length/n_points
     return pd.DataFrame({'rms_displacement': rms_dx,
                          'max_displacement': max_dx,
-                         'path_length': per_object['SegmentLength'].sum()})
+                         'path_length': path_length,
+                         'n_points': n_points,
+                         'velocity': velocity})
 
 def summary(df):
     return pd.DataFrame({'filename': [df['filename'].iloc[0]],
@@ -109,7 +114,9 @@ def summary(df):
                          'mean_path_length': [df['path_length'].mean()],
                          'median_path_length': [df['path_length'].median()],
                          'mean_max_dx': [df['max_displacement'].mean()],
-                         'median_max_dx': [df['max_displacement'].median()]})
+                         'median_max_dx': [df['max_displacement'].median()],
+                         'mean_velocity': [df['velocity'].mean()],
+                         'sd_velocity': [df['velocity'].std()]})
 
 def main():
     parser = argparse.ArgumentParser(description="Draw displacement plots.")
