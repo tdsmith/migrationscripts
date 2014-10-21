@@ -7,13 +7,15 @@
 # © tim smith 2014, tim.smith@uci.edu
 # released under the terms of the wtfpl http://wtfpl.net
 
-import pandas as pd
-from StringIO import StringIO
-import ggplot as gg
-import codecs
+from __future__ import division
 import argparse
-from numpy import sqrt, sum, array
+import codecs
+import ggplot as gg
+import pandas as pd
 import sys
+import time
+from numpy import sqrt, sum, array
+from StringIO import StringIO
 
 def read_mtrack2(filename):
     with open(filename) as f:
