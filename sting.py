@@ -159,6 +159,9 @@ def main():
     summary_by_file = obj_stats.groupby('filename').apply(summary)
     if args.summary:
         summary_by_file.to_csv(args.summary, index=False)
+    print("# Produced by {} at {}".format(' '.join(sys.argv), time.ctime()))
+    print("# {} pixels per micron, {} minutes per frame".format(args.pixels_per_micron, args.minutes_per_frame))
+    print("# distance units are microns; velocity units are microns/hour")
     obj_stats.to_csv(sys.stdout, index=False)
 
 if __name__ == '__main__':
