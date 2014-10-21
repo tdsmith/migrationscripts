@@ -132,8 +132,13 @@ def main():
                         help="Pixels per µm (length scale of tracked images)")
     parser.add_argument('--minutes-per-frame', '--minutes', '-m', default=10, type=float,
                         help="Minutes between each frame of the tracked images")
+    parser.add_argument('--plot-titles', type=argparse.FileType('r'),
+                        help="CSV file with filename and title columns")
     parser.add_argument('infile', nargs='+', help="File(s) to process.")
     args = parser.parse_args()
+
+    plot_titles = pd.read_csv(args.plot_titles, index_col="filename") if args.plot_titles else None
+
     all_dfs = []
     for filename in args.infile:
         # there has to be a better pattern for this
@@ -148,6 +153,8 @@ def main():
         centered.to_csv(filename + '.centered')
         if not args.no_plots:
             g = displacement_plot(centered, limits = args.limits) + gg.theme(axis_text=gg.element_text(size=8))
+            if plot_titles is not None and filename in plot_titles.index:
+                g += gg.labs(title=plot_titles.ix[filename, 'title'])
             gg.ggsave(g, '{}.{}'.format(filename, args.imagetype), width=2.5, height=1.81, units='in')
         centered['filename'] = filename
         all_dfs.append(centered)
