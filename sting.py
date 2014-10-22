@@ -80,7 +80,9 @@ def displacement_plot(centered, limits = None):
     centered = centered.sort(['Frame', 'Object'])
     g = (gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) +
          gg.geom_path(size=0.3) +
-         gg.theme_bw())
+         # gg.theme_bw() +
+         # gg.theme(panel_grid=gg.element_line(colour="#666666")))
+         gg.theme_seaborn())
     if limits: g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     return g
 
