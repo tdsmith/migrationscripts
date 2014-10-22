@@ -7,13 +7,15 @@
 # © tim smith 2014, tim.smith@uci.edu
 # released under the terms of the wtfpl http://wtfpl.net
 
-import pandas as pd
-from StringIO import StringIO
-import ggplot as gg
-import codecs
+from __future__ import division
 import argparse
-from numpy import sqrt, sum, array
+import codecs
+import ggplot as gg
+import pandas as pd
 import sys
+import time
+from numpy import sqrt, sum, array
+from StringIO import StringIO
 
 def read_mtrack2(filename):
     with open(filename) as f:
@@ -86,22 +88,28 @@ def displacement_plot(centered, limits = None):
     if limits: g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     return g
 
-def stats(df):
+def stats(df, length_scale=1, time_scale=1):
     def segment_lengths(obj):
         obj['SegmentLength'] = obj['cX']
         # use array() to prevent index alignment
         obj.ix[1:, 'SegmentLength'] = sqrt((obj['X'][1:] - array(obj['X'][:-1]))**2 +
-                                           (obj['Y'][1:] - array(obj['Y'][:-1]))**2)
+                                           (obj['Y'][1:] - array(obj['Y'][:-1]))**2) / length_scale
         return obj
     rms = lambda x: sqrt(sum(x**2))
-    df['Distance'] = sqrt(df['cX']**2 + df['cY']**2)
+    df['Distance'] = sqrt(df['cX']**2 + df['cY']**2) / length_scale
     df = df.groupby('Object').apply(segment_lengths)
     per_object = df.groupby('Object')
     rms_dx = per_object['Distance'].aggregate(rms)
     max_dx = per_object['Distance'].max()
+    path_length = per_object['SegmentLength'].sum()
+    n_points = per_object['SegmentLength'].aggregate(len)
+    last_frame = per_object['Frame'].max()
+    velocity = path_length/(last_frame * time_scale / 60.0)
     return pd.DataFrame({'rms_displacement': rms_dx,
                          'max_displacement': max_dx,
-                         'path_length': per_object['SegmentLength'].sum()})
+                         'path_length': path_length,
+                         'n_points': n_points,
+                         'velocity': velocity})
 
 def summary(df):
     return pd.DataFrame({'filename': [df['filename'].iloc[0]],
@@ -111,16 +119,28 @@ def summary(df):
                          'mean_path_length': [df['path_length'].mean()],
                          'median_path_length': [df['path_length'].median()],
                          'mean_max_dx': [df['max_displacement'].mean()],
-                         'median_max_dx': [df['max_displacement'].median()]})
+                         'median_max_dx': [df['max_displacement'].median()],
+                         'mean_velocity': [df['velocity'].mean()],
+                         'sd_velocity': [df['velocity'].std()]})
 
 def main():
-    parser = argparse.ArgumentParser(description="Draw displacement plots.")
-    parser.add_argument('--limits', type=int, help="Maximum extent of the axes.")
-    parser.add_argument('--no-plots', action='store_true', help="Don't save plots.")
+    parser = argparse.ArgumentParser(description="Draws displacement plots.",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--limits', type=int, help="Maximum extent of the axes")
+    parser.add_argument('--no-plots', action='store_true', help="Don't save plots")
     parser.add_argument('--summary', help='Save summary stats by file')
-    parser.add_argument('--imagetype', '-i', default='png', help="Extension to use for plots (defaults to png).")
+    parser.add_argument('--imagetype', '-i', default='png', help="Extension to use for plots")
+    parser.add_argument('--pixels-per-micron', '--pixels', '-p', default=1.51, type=float,
+                        help="Pixels per µm (length scale of tracked images)")
+    parser.add_argument('--minutes-per-frame', '--minutes', '-m', default=10, type=float,
+                        help="Minutes between each frame of the tracked images")
+    parser.add_argument('--plot-titles', type=argparse.FileType('r'),
+                        help="CSV file with filename and title columns")
     parser.add_argument('infile', nargs='+', help="File(s) to process.")
     args = parser.parse_args()
+
+    plot_titles = pd.read_csv(args.plot_titles, index_col="filename") if args.plot_titles else None
+
     all_dfs = []
     for filename in args.infile:
         # there has to be a better pattern for this
@@ -135,14 +155,22 @@ def main():
         centered.to_csv(filename + '.centered')
         if not args.no_plots:
             g = displacement_plot(centered, limits = args.limits) + gg.theme(axis_text=gg.element_text(size=8))
+            if plot_titles is not None and filename in plot_titles.index:
+                g += gg.labs(title=plot_titles.ix[filename, 'title'])
             gg.ggsave(g, '{}.{}'.format(filename, args.imagetype), width=2.5, height=1.81, units='in')
         centered['filename'] = filename
         all_dfs.append(centered)
     mega_df = pd.concat(all_dfs, ignore_index=True)
-    obj_stats = mega_df.groupby('filename', sort=False).apply(stats).reset_index()
+    obj_stats = (mega_df.groupby('filename', sort=False)
+                        .apply(lambda x: stats(x, length_scale=args.pixels_per_micron,
+                                                  time_scale=args.minutes_per_frame))
+                        .reset_index())
     summary_by_file = obj_stats.groupby('filename').apply(summary)
     if args.summary:
         summary_by_file.to_csv(args.summary, index=False)
+    print("# Produced by {} at {}".format(' '.join(sys.argv), time.ctime()))
+    print("# {} pixels per micron, {} minutes per frame".format(args.pixels_per_micron, args.minutes_per_frame))
+    print("# distance units are microns; velocity units are microns/hour")
     obj_stats.to_csv(sys.stdout, index=False)
 
 if __name__ == '__main__':
