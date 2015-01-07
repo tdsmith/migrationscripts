@@ -32,6 +32,8 @@ print(g)
 dx = data.groupby('Frame')['Distance']
 rms_dx = pd.DataFrame({'RMS_Distance': dx.aggregate(rms), 'n': dx.aggregate(len)})
 rms_dx = rms_dx.reset_index()
-g = (gg.ggplot(rms_dx, gg.aes('Frame', 'RMS_Distance', size='n')) + gg.geom_line(size=1) +
-     gg.geom_point(alpha=0.5) + gg.theme_bw())
+g = (gg.ggplot(rms_dx, gg.aes(x='Frame', y='RMS_Distance', size='n')) +
+     gg.geom_line(size=1) +
+     gg.geom_point(alpha=0.5) +
+     gg.theme_bw())
 print(g)
