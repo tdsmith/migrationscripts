@@ -88,16 +88,18 @@ def displacement_plot(centered, limits = None):
     if limits: g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     return g
 
+def segment_lengths(obj):
+    obj.loc[:,'SegmentLength'] = 0
+    # use array() to prevent index alignment
+    obj['SegmentLength'].iloc[1:] = sqrt((obj['X'].iloc[1:] - array(obj['X'][:-1]))**2 +
+                                         (obj['Y'].iloc[1:] - array(obj['Y'][:-1]))**2)
+    return obj
+
 def stats(df, length_scale=1, time_scale=1):
-    def segment_lengths(obj):
-        obj['SegmentLength'] = obj['cX']
-        # use array() to prevent index alignment
-        obj.ix[1:, 'SegmentLength'] = sqrt((obj['X'][1:] - array(obj['X'][:-1]))**2 +
-                                           (obj['Y'][1:] - array(obj['Y'][:-1]))**2) / length_scale
-        return obj
     rms = lambda x: sqrt(sum(x**2))
     df['Distance'] = sqrt(df['cX']**2 + df['cY']**2) / length_scale
     df = df.groupby('Object').apply(segment_lengths)
+    df['SegmentLength'] /= length_scale
     per_object = df.groupby('Object')
     rms_dx = per_object['Distance'].aggregate(rms)
     max_dx = per_object['Distance'].max()
