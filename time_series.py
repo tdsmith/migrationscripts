@@ -10,6 +10,7 @@ from matplotlib.figure import SubplotParams
 from numpy import sqrt, cumsum, array
 from sting import read_mtrackj_mdf, center
 from os.path import basename, splitext
+from lmfit import Model
 
 def segment_lengths(obj):
     obj['SegmentLength'] = obj['cX']
@@ -30,11 +31,14 @@ def fit_random_walk_to_tracks(df, n_points):
     mean_square_distance.reset_index()
     t = 1
     fitfunc = lambda x, s, p: s**2 * p**2 * (x/p - 1 + np.exp(-x/p))
+    model = Model(fitfunc)
+    model.set_param_hint('s', value=0.6, min=0)
+    model.set_param_hint('p', value=40, min=0)
     x = (np.arange(n_points) + 1) * t
     y = mean_square_distance.ix[:n_points, 'mean_square_distance']
-    popt, pcov = sp.optimize.curve_fit(fitfunc, x, y, [0.6, 40], maxfev=2000, ftol=1e-6, xtol=1e-6)
-    fit = pd.DataFrame({'t': x, 'y': y, 'fit': fitfunc(x, *popt)})
-    return popt, fit
+    result = model.fit(y, x=x)
+    fit = pd.DataFrame({'t': x, 'y': y, 'fit': result.best_fit})
+    return (result.best_values['s'], result.best_values['p']), fit
 
 def individual_plots(data):
     rms = lambda x: sqrt(sum(x**2))/len(x)
