@@ -20,26 +20,6 @@ def segment_lengths(obj):
     obj['PartialPathLength'] = cumsum(obj['SegmentLength'])
     return obj
 
-def fit_random_walk_to_tracks(df, n_points):
-    df['Distance'] = sqrt(df['cX']**2 + df['cY']**2)
-    distances = df.groupby('Frame')['Distance']
-    mean_square = lambda x: sum(x**2)/len(x)
-    mean_square_distance = pd.DataFrame({
-            'mean_square_distance': distances.aggregate(mean_square),
-            'n': distances.aggregate(len)
-            })
-    mean_square_distance.reset_index()
-    t = 1
-    fitfunc = lambda x, s, p: s**2 * p**2 * (x/p - 1 + np.exp(-x/p))
-    model = Model(fitfunc)
-    model.set_param_hint('s', value=0.6, min=0)
-    model.set_param_hint('p', value=40, min=0)
-    x = (np.arange(n_points) + 1) * t
-    y = mean_square_distance.ix[:n_points, 'mean_square_distance']
-    result = model.fit(y, x=x)
-    fit = pd.DataFrame({'t': x, 'y': y, 'fit': result.best_fit})
-    return (result.best_values['s'], result.best_values['p']), fit
-
 def individual_plots(data):
     rms = lambda x: sqrt(sum(x**2))/len(x)
 
@@ -65,33 +45,11 @@ def open_mdf(mdf_file):
     data = read_mtrackj_mdf(mdf_file)
     return center(data)
 
-def plot_ensemble(mdfs):
-    fits = {}
-    mdfs.sort(key=lambda x: int(splitext(basename(x))[0][:2]))
-    for mdf in mdfs:
-        data = open_mdf(mdf)
-        (s, p), fit = fit_random_walk_to_tracks(data, 100)
-        fits[mdf] = ((s,p), fit)
-    subplotpars = SubplotParams(left=0.05, bottom=0.05,
-                                right=0.95, top=0.95,
-                                wspace=0.4, hspace=0.7)
-    fig, ax = plt.subplots(5,6, subplotpars=subplotpars)
-    for i, mdf in enumerate(mdfs):
-        s, p = fits[mdf][0]
-        fit = fits[mdf][1]
-        ax.flat[i].plot(fit['t'], fit['y'], '.',
-                        fit['t'], fit['fit'], '-')
-        ax.flat[i].text(0.05, 0.95, '({:.2f}, {:.2f})'.format(s, p),
-            horizontalalignment='left', verticalalignment='top',
-            transform=ax.flat[i].transAxes)
-        ax.flat[i].set_title(basename(mdf))
-    plt.show()
-        
 def main():
     import sys, argparse
     parser = argparse.ArgumentParser(description='Make some plots.')
-    parser.add_argument('--individual', '-i', action='store_true')
-    parser.add_argument('mdf_file', nargs='+')
+    # parser.add_argument('--individual', '-i', action='store_true')
+    parser.add_argument('mdf_file', nargs='1')
     args = parser.parse_args()
     if args.individual:
         for infile in parser.mdf_file:
