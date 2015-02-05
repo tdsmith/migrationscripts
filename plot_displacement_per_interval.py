@@ -51,15 +51,15 @@ def main():
 
     data = open_mdf(args.mdf_file)
     g = data.groupby("Object")
-    subplotpars = SubplotParams(left=0.05, bottom=0.05,
-                                right=0.95, top=0.95,
-                                wspace=0.4, hspace=0.7)
-    fig, ax = plt.subplots(5, len(g)//5 + 1, sharex=True, sharey=True,
+    subplotpars = SubplotParams(left=0.05, bottom=0.10,
+                                right=0.95, top=0.90,
+                                wspace=0.4, hspace=0.5)
+    fig, ax = plt.subplots(len(g)//4 + 1, 4, sharex=True, sharey=True,
                            subplotpars=subplotpars)
     for i, (name, group) in enumerate(g):
         ms_dx = calculate_ms_dx(group)
         result, (T, best_fit) = fit_model(ms_dx)
-        ax.flat[i].plot(T, ms_dx, '.', T[:len(best_fit)], best_fit)
+        ax.flat[i].plot(T, ms_dx, '.', T[:len(best_fit)], best_fit, linewidth=5)
         s, p = result.best_values['s'], result.best_values['p']
         ax.flat[i].set_title(name)
         ax.flat[i].text(
