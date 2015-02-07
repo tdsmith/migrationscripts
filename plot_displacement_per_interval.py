@@ -2,6 +2,7 @@
 
 from __future__ import division, print_function
 import argparse
+import sys
 
 from lmfit import Model
 from matplotlib import pyplot as plt
@@ -12,6 +13,7 @@ import scipy as sp
 import warnings
 
 from sting import read_mtrackj_mdf, center
+
 
 class SkippedCellWarning(UserWarning):
     pass
@@ -66,6 +68,11 @@ def main():
                         help='Extension to use for plots')
     parser.add_argument('mdf_file', nargs='+')
     args = parser.parse_args()
+    fit_table = {'Filename': [],
+                 'Object': [],
+                 's': [],
+                 'p': [],
+                 'r2': []}
 
     for mdf_file in args.mdf_file:
         data = open_mdf(mdf_file)
@@ -99,8 +106,19 @@ def main():
                 0.05, 0.95, '({:.2f}, {:.2f})'.format(s, p),
                 horizontalalignment='left', verticalalignment='top',
                 transform=ax.flat[i].transAxes)
+
+            fit_table['Filename'].append(mdf_file)
+            fit_table['Object'].append(name)
+            fit_table['s'].append(s)
+            fit_table['p'].append(p)
+            r2, _ = sp.stats.pearsonr(ms_dx[:len(best_fit)], best_fit)
+            fit_table['r2'].append(r2)
+
         fig.savefig("{}-rw_fit.{}".format(mdf_file, args.imagetype))
         plt.close(fig)
+
+    df = pd.DataFrame(fit_table)
+    sys.stdout.write(df.to_csv(index=False))
 
 if __name__ == '__main__':
     main()
