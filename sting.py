@@ -79,15 +79,21 @@ def center(df):
     centered['cY'] = -centered['cY']
     return centered
 
-def displacement_plot(centered, limits = None):
+def displacement_plot(centered, limits = None, style=None):
+    style = {} if style is None else style
     centered['Object'] = centered['Object'].map(str)
     centered = centered.sort(['Frame', 'Object'])
     g = (gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) +
-         gg.geom_path(size=0.3) +
-         # gg.theme_bw() +
-         # gg.theme(panel_grid=gg.element_line(colour="#666666")))
-         gg.theme_seaborn())
-    if limits: g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
+         gg.geom_path(size=0.3))
+    g += gg.theme_bw() if 'theme-bw' in style else gg.theme_seaborn()
+    if limits:
+        g += gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
+    if 'no-terminal-dot' not in style:
+        max_frame = centered['Frame'].max()
+        endframe = centered.groupby('Object')['Frame'].max()
+        endframe = endframe[endframe != max_frame].reset_index()
+        endframe = endframe.merge(centered, on=['Object', 'Frame'])
+        g += gg.geom_point(data=endframe, color='black', size=1)
     return g
 
 def segment_lengths(obj):
@@ -140,8 +146,13 @@ def main():
                         help="Minutes between each frame of the tracked images")
     parser.add_argument('--plot-titles', type=argparse.FileType('r'),
                         help="CSV file with filename and title columns")
+    parser.add_argument('--style', action='append', default=[],
+                        choices=['theme-bw', 'no-terminal-dot'],
+                        help='Change style options for the plot.')
     parser.add_argument('infile', nargs='+', help="File(s) to process.")
     args = parser.parse_args()
+
+    style = {argument: True for argument in args.style}
 
     plot_titles = pd.read_csv(args.plot_titles, index_col="filename") if args.plot_titles else None
 
@@ -158,7 +169,8 @@ def main():
         centered = center(df)
         centered.to_csv(filename + '.centered')
         if not args.no_plots:
-            g = displacement_plot(centered, limits = args.limits) + gg.theme(axis_text=gg.element_text(size=8))
+            g = (displacement_plot(centered, limits = args.limits, style=style) +
+                 gg.theme(axis_text=gg.element_text(size=8)))
             if plot_titles is not None and filename in plot_titles.index:
                 g += gg.labs(title=plot_titles.ix[filename, 'title'])
             gg.ggsave(g, '{}.{}'.format(filename, args.imagetype), width=2.5, height=1.81, units='in')
