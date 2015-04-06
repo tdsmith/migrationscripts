@@ -8,21 +8,23 @@
 # released under the terms of the wtfpl http://wtfpl.net
 
 from __future__ import division
+
 import argparse
 import codecs
-import ggplot as gg
-import pandas as pd
+from StringIO import StringIO
 import sys
 import time
+
+import ggplot as gg
+import pandas as pd
 from numpy import sqrt, sum, array
-from StringIO import StringIO
 
 def read_mtrack2(filename):
     with open(filename) as f:
         buf = f.readlines()
     if '\n' in buf:
-    	# there might be an extra table at the end that we don't care about
-    	buf = buf[:buf.index('\n')]
+       # there might be an extra table at the end that we don't care about
+       buf = buf[:buf.index('\n')]
     buf = ''.join(buf)
     iobuf = StringIO(buf)
     # row 0 is headers and data starts on row 2 so skip row 1
