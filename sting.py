@@ -152,6 +152,12 @@ def main():
     parser.add_argument('--tick-breaks', '--ticks', '-t', nargs=3, type=int,
                         metavar=('start', 'end', 'step'),
                         help="Beginning and end tick breaks on displacement plots")
+    parser.add_argument('--plot-text', type=int, default=8,
+                        help='Plot text size (pt)')
+    parser.add_argument('--plot-height', type=float, default=1.81,
+                        help='Plot height (in)')
+    parser.add_argument('--plot-width', type=float, default=2.5,
+                        help='Plot width (in)')
     parser.add_argument('infile', nargs='+', help="File(s) to process.")
     args = parser.parse_args()
 
@@ -173,14 +179,15 @@ def main():
         centered.to_csv(filename + '.centered')
         if not args.no_plots:
             g = displacement_plot(centered, limits = args.limits, style=style)
-            g += gg.theme(axis_text=gg.element_text(size=30))
+            g += gg.theme(axis_text=gg.element_text(size=args.plot_text))
             g += gg.labs(x='um', y='um')
             if args.tick_breaks:
                 g += gg.scale_x_continuous(breaks=range(*args.tick_breaks))
                 g += gg.scale_y_continuous(breaks=range(*args.tick_breaks))
             if plot_titles is not None and filename in plot_titles.index:
                 g += gg.labs(title=plot_titles.ix[filename, 'title'])
-            gg.ggsave(g, '{}.{}'.format(filename, args.imagetype), width=2.5, height=1.81, units='in')
+            gg.ggsave(g, '{}.{}'.format(filename, args.imagetype),
+                      width=args.plot_width, height=args.plot_height, units='in')
         centered['filename'] = filename
         all_dfs.append(centered)
     mega_df = pd.concat(all_dfs, ignore_index=True)
