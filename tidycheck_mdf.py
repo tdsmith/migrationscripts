@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Given a MTrackJ .mdf file, keep tracks with the right number of points."""
 
 import codecs
