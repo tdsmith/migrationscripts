@@ -79,7 +79,7 @@ def center(df):
     centered['cY'] = -centered['cY']
     return centered
 
-def displacement_plot(centered, limits = None, style=None):
+def displacement_plot(centered, limits=None, style=None):
     style = {} if style is None else style
     centered['Object'] = centered['Object'].map(str)
     centered = centered.sort(['Frame', 'Object'])
@@ -87,7 +87,7 @@ def displacement_plot(centered, limits = None, style=None):
          gg.geom_path(size=0.3))
     g += gg.theme_bw() if 'theme-bw' in style else gg.theme_seaborn()
     if limits:
-        g += gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
+        g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     if 'no-terminal-dot' not in style:
         max_frame = centered['Frame'].max()
         endframe = centered.groupby('Object')['Frame'].max()
