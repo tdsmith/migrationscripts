@@ -93,7 +93,10 @@ def displacement_plot(centered, limits=None, style=None):
         endframe = centered.groupby('Object')['Frame'].max()
         endframe = endframe[endframe != max_frame].reset_index()
         endframe = endframe.merge(centered, on=['Object', 'Frame'])
-        g += gg.geom_point(data=endframe, color='black', size=1)
+        # we should check if endframe is empty before adding it:
+        # https://github.com/yhat/ggplot/issues/425
+        if not endframe.empty:
+            g += gg.geom_point(data=endframe, color='black', size=1)
     return g
 
 def segment_lengths(obj):
