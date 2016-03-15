@@ -1,8 +1,13 @@
 from __future__ import division
 
+import os
+
+from PIL import Image
 import numpy as np
 import pandas as pd
 import tifffile as tf
+
+from sting import read_mtrackj_mdf
 
 
 def extract_window(image, x, y, h, w):
@@ -17,8 +22,25 @@ def extract_window(image, x, y, h, w):
 
 
 def stack_extract_window(stack, xlist, ylist, h, w):
+    assert len(stack.shape) == 3
     n = stack.shape[0]
     out = np.zeros((n, h, w), dtype=stack.dtype)
     for i, (im, x, y) in enumerate(zip(stack, xlist, ylist)):
         out[i] = extract_window(im, x, y, h, w)
     return out
+
+
+def movie_of_cell(mdf_frame, filenames, h, w):
+    assert len(mdf_frame.Object.unique()) == 1
+    if isinstance(filenames, basestring):
+        # it's a single file; open it with tifffile
+        images = np.array(tf.imread(filenames), ndmin=3)
+    else:
+        # we have a list of filenames; open them with Pillow because they're
+        # probably jpegs.
+        # assert the filenames have the same extension
+        assert len(set([os.path.splitext(fn)[1] for fn in filenames])) == 1
+        images = np.array([np.asarray(Image.open(fn)) for fn in filenames])
+    return stack_extract_window(images,
+                                mdf_frame.X, mdf_frame.Y,
+                                h, w)

@@ -1,5 +1,6 @@
 import unittest
 
+import pandas as pd
 import tifffile as tf
 
 from extract_cell import *
@@ -30,6 +31,41 @@ class TestExtractWindow(unittest.TestCase):
             tf.imsave("test_stack_extract_window.tif",
                       extracted,
                       photometric="minisblack")
+
+    def test_movie_of_cell(self):
+        fake_mdf_1 = pd.DataFrame({
+            "Object": [1],
+            "X": [100],
+            "Y": [100]
+        })
+        movie = movie_of_cell(
+            fake_mdf_1,
+            "test_fixtures/single_page.tif",
+            200, 200)
+        self.assertIsInstance(movie, np.ndarray)
+        self.assertEqual(movie.shape, (1, 200, 200))
+
+        # test the pillow code path
+        movie = movie_of_cell(
+            fake_mdf_1,
+            ["test_fixtures/single_page.tif"],
+            200, 200)
+        self.assertIsInstance(movie, np.ndarray)
+        self.assertEqual(movie.shape, (1, 200, 200))
+
+        fake_mdf_4 = pd.DataFrame({
+            "Object": [1, 1, 1, 1],
+            "X": [100, 120, 140, 160],
+            "Y": [200, 180, 160, 140],
+        })
+        movie = movie_of_cell(
+            fake_mdf_4,
+            "test_fixtures/multi_page.tif",
+            200, 200)
+        self.assertIsInstance(movie, np.ndarray)
+        self.assertEqual(movie.shape, (4, 200, 200))
+        if WRITE_OUTPUT:
+            tf.imsave("test_movie_of_cell.tif", movie, photometric="minisblack")
 
 
 if __name__ == "__main__":
