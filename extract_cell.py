@@ -44,3 +44,11 @@ def movie_of_cell(mdf_frame, filenames, h, w):
     return stack_extract_window(images,
                                 mdf_frame.X, mdf_frame.Y,
                                 h, w)
+
+
+def movies_from_mdf(mdf_frame, filenames):
+    # filenames is a Object -> filename dict, where filename is a string or a
+    # list of strings.
+    for name, group in mdf_frame.groupby("Object"):
+        movie = movie_of_cell(group, filenames, 200, 200)
+        yield (name, movie)
