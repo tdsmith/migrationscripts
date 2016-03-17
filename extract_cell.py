@@ -3,12 +3,15 @@ from __future__ import division
 import os
 
 from PIL import Image
+from numba import jit
 import numpy as np
-import pandas as pd
 import tifffile as tf
 
+<<<<<<< HEAD
 from sting import read_mtrackj_mdf
 
+=======
+>>>>>>> 2b284af... foo
 
 def extract_window(image, x, y, h, w):
     hw, hh = w//2, h//2
