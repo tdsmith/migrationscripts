@@ -22,7 +22,8 @@ def extract_window(image, x, y, h, w):
 
 def stack_extract_window(stack, xlist, ylist, h, w):
     assert len(stack.shape) == 3
-    n = stack.shape[0]
+    assert len(xlist) == len(ylist)
+    n = min(stack.shape[0], len(xlist))
     out = np.zeros((n, h, w), dtype=stack.dtype)
     for i, (im, x, y) in enumerate(zip(stack, xlist, ylist)):
         out[i] = extract_window(im, x, y, h, w)
