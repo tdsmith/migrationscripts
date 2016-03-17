@@ -7,12 +7,8 @@ from numba import jit
 import numpy as np
 import tifffile as tf
 
-<<<<<<< HEAD
-from sting import read_mtrackj_mdf
 
-=======
->>>>>>> 2b284af... foo
-
+@jit
 def extract_window(image, x, y, h, w):
     hw, hh = w//2, h//2
     sample = image[max(0, y-hh):y+hh, max(0, x-hw):x+hw]
