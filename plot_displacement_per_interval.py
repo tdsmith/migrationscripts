@@ -13,6 +13,7 @@ import scipy as sp
 import warnings
 
 from sting import read_mtrackj_mdf, center
+from time_series import segment_lengths
 
 
 class SkippedCellWarning(UserWarning):
@@ -43,11 +44,19 @@ def calculate_ms_dx(cell, pixels_per_micron=1.51):
     return array(ms_dx)
 
 
-def fit_model(ms_dx, hours_per_frame=5/60):
+def guess_speed(cell, pixels_per_micron, hours_per_frame):
+    # calculate path-length
+    cell = segment_lengths(cell)
+    len_h = len(cell.index) * hours_per_frame
+    print(cell["PartialPathLength"].iloc[-1] / pixels_per_micron / len_h)
+    return cell["PartialPathLength"].iloc[-1] / pixels_per_micron / len_h
+
+
+def fit_model(ms_dx, guess_s, hours_per_frame=5/60):
     fitfunc = lambda T, s, p: (s**2 * p**2) * (T/p - 1 + exp(-T/p))
     n = len(ms_dx)//2
     model = Model(fitfunc)
-    model.set_param_hint('s', value=2, min=0)
+    model.set_param_hint('s', value=guess_s, min=0, max=200)
     model.set_param_hint('p', value=0.5, min=0)
     T = (arange(len(ms_dx)) + 1) * hours_per_frame
     result = model.fit(ms_dx[:n], T=T[:n])
@@ -66,6 +75,10 @@ def main():
                         help="Don't save plots")
     parser.add_argument('--imagetype', '-i', default='pdf',
                         help='Extension to use for plots')
+    parser.add_argument('--minutes', '-m', default=5, type=int,
+                        help='Minutes between frames')
+    parser.add_argument('--pixels', '-p', default=1.51, type=float,
+                        help='Pixels per micron')
     parser.add_argument('mdf_file', nargs='+')
     args = parser.parse_args()
     fit_table = {'Filename': [],
@@ -90,14 +103,21 @@ def main():
                     NotEnoughTimepointsWarning)
                 continue
             try:
-                ms_dx = calculate_ms_dx(group)
-            except Exception:
+                ms_dx = calculate_ms_dx(
+                    group,
+                    pixels_per_micron=args.pixels)
+                s_guess = guess_speed(
+                    group,
+                    pixels_per_micron=args.pixels,
+                    hours_per_frame=args.minutes/60.)
+            except Exception as e:
+                print(e)
                 warnings.warn(
                     "Skipping object {} in file {}: "
                     "alignment error?".format(name, mdf_file),
                     SkippedCellWarning)
                 continue
-            result, (T, best_fit) = fit_model(ms_dx)
+            result, (T, best_fit) = fit_model(ms_dx, s_guess)
             ax.flat[i].plot(T, ms_dx, '.',
                             T[:len(best_fit)], best_fit, linewidth=5)
             s, p = result.best_values['s'], result.best_values['p']
