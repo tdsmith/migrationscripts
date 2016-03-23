@@ -13,6 +13,7 @@ from os.path import basename, splitext
 from lmfit import Model
 
 def segment_lengths(obj):
+    obj = obj.copy()
     obj['SegmentLength'] = obj['cX']
     # use array() to prevent index alignment
     obj.ix[1:, 'SegmentLength'] = sqrt((obj['X'][1:] - array(obj['X'][:-1]))**2 +
