@@ -21,6 +21,14 @@ from numpy import sqrt, sum, array
 
 
 def read_mtrack2(filename):
+    """Reads position data from MTrack2 ImageJ plugin results.
+
+    params:
+        filename (str): Path to the result file
+
+    returns:
+        df (pd.DataFrame): with Object, Frame, X, Y columns
+    """
     with open(filename) as f:
         buf = f.readlines()
     if '\n' in buf:
@@ -47,6 +55,16 @@ def read_mtrack2(filename):
 
 
 def read_manual_track(filename):
+    """Reads position data from Manual Tracking ImageJ plugin results.
+    Assumes file was produced on a (modern, circa 2016) Mac.
+    (Why does Fiji default to mac-roman? Deep Java Mysteries.)
+
+    params:
+        filename (str): Path to the result file
+
+    returns:
+        df (pd.DataFrame): with Object, Frame, X, Y columns
+    """
     df = pd.read_csv(filename, sep='\t', encoding='mac-roman')
     df.rename(columns={u'Track n°': 'Object',
                        u'Slice n°': 'Frame'},
@@ -57,6 +75,16 @@ def read_manual_track(filename):
 
 
 def read_mtrackj_mdf(filename):
+    """Reads position data from MTrackJ ImageJ plugin results.
+    Assumes file was produced on a (modern, circa 2016) Mac.
+    (Why does Fiji default to mac-roman? Deep Java Mysteries.)
+
+    params:
+        filename (str): Path to the result file
+
+    returns:
+        df (pd.DataFrame): with Object, Frame, X, Y columns
+    """
     f = codecs.open(filename, 'r', 'mac-roman')
     if not f.readline().startswith("MTrackJ"):
         raise ValueError("File {} is not in MTrackJ MDF format.".format(filename))
@@ -75,6 +103,15 @@ def read_mtrackj_mdf(filename):
 
 
 def center(df):
+    """Adds cX and cY columns, which are X and Y relative to the initial position
+    of the object. Probably modifies its argument in-place.
+
+    params:
+        df (pd.DataFrame): with X and Y columns
+
+    returns:
+        df (pd.DataFrame): input DataFrame augmented with cX, cY columns
+    """
     def center_transform(x):
         x['cX'] = x['X'] - x['X'].iloc[0]
         x['cY'] = x['Y'] - x['Y'].iloc[0]
@@ -85,6 +122,20 @@ def center(df):
 
 
 def displacement_plot(centered, limits=None, style=None):
+    u"""Draws nice displacement plots using ggplot2.
+
+    params:
+        centered (pd.DataFrame): needs cX, cY, Object, Frame columns, probably
+            produced by calling center() above
+        limits (real): Sets the limits of the scales to a square window showing
+            ±limits on each axis.
+        style (Iterable): Collection of strings. Recognized values are 'theme-bw'
+            (which uses theme_bw instead of theme_seaborn) and 'no-terminal-dot'
+            (which does not label the end of tracks which terminate early).
+
+    Returns:
+        g (gg.ggplot): Plot object
+    """
     style = {} if style is None else style
     centered['Object'] = centered['Object'].map(str)
     centered = centered.sort(['Frame', 'Object'])
@@ -106,6 +157,17 @@ def displacement_plot(centered, limits=None, style=None):
 
 
 def segment_lengths(obj):
+    """Augments its argument obj with a column SegmentLength containing the
+    Euclidean distance between the point at each row and the row following.
+
+    Params:
+        obj (pd.DataFrame): A data frame with X and Y columns describing a single
+            object (i.e. all values of Object should be identical within
+            this data frame!)
+
+    Returns:
+        obj (pd.DataFrame): Input augmented with SegmentLength column
+    """
     obj.loc[:, 'SegmentLength'] = 0
     # use array() to prevent index alignment
     obj['SegmentLength'].iloc[1:] = sqrt((obj['X'].iloc[1:] - array(obj['X'][:-1]))**2 +
@@ -114,6 +176,23 @@ def segment_lengths(obj):
 
 
 def stats(df, length_scale=1, time_scale=1):
+    u"""Computes summary statistics for each track in an observation file.
+    Object is assumed to be unique.
+
+    Params:
+        df (pd.DataFrame): Must have columns Object, cX, cY; Object is assumed
+            to be unique
+        length_scale (real): Length scale of images in pixels per micron.
+        time_scale (real): Time scale of images in minutes per frame.
+
+    Returns:
+        stats (pd.DataFrame): One row for each object containing columns:
+            rms_displacement: Root-mean-square distance from origin
+            max_displacement: Furthest (not final!) distance from origin
+            path_length: Number of points sampled
+            velocity: Velocity, as path length divided by time observed, in
+                µm/hr
+    """
     rms = lambda x: sqrt(sum(x**2))
     df['Distance'] = sqrt(df['cX']**2 + df['cY']**2) / length_scale
     df = df.groupby('Object').apply(segment_lengths)
@@ -133,6 +212,25 @@ def stats(df, length_scale=1, time_scale=1):
 
 
 def summary(df):
+    """Yields a list of single summary metrics over all tracks in a results file.
+
+    Params:
+        df (pd.DataFrame): The output of stats() above. All rows are expected
+            to have an identical value of df['filename'].
+
+    Returns:
+        df (pd.DataFrame): A DataFrame with 1 row and several columns:
+            filename: The filename of the results file
+            median_rms_dx: Median (over all tracks) RMS displacement from origin
+            mean_rms_dx: Mean (over all tracks) RMS displacement from origin
+            n: Number of tracks in the results file
+            mean_path_length: Mean (over all tracks) path length
+            median_path_length: Median (over all tracks) path length
+            mean_max_dx: Mean (over all tracks) maximum displacement
+            median_max_dx: Median (over all tracks) maximum displacement
+            mean_velocity: Mean (over all tracks) of velocity along paths
+            sd_velocity: Standard deviation (over all tracks) of velocities
+    """
     return pd.DataFrame({'filename': [df['filename'].iloc[0]],
                          'median_rms_dx': [df['rms_displacement'].median()],
                          'mean_rms_dx': [df['rms_displacement'].mean()],
