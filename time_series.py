@@ -3,14 +3,9 @@
 from __future__ import division
 import ggplot as gg
 import pandas as pd
-import numpy as np
-import scipy as sp
-import matplotlib.pyplot as plt
-from matplotlib.figure import SubplotParams
 from numpy import sqrt, cumsum, array
 from sting import read_mtrackj_mdf, center
-from os.path import basename, splitext
-from lmfit import Model
+
 
 def segment_lengths(obj):
     obj = obj.copy()
@@ -20,6 +15,7 @@ def segment_lengths(obj):
                                        (obj['Y'][1:] - array(obj['Y'][:-1]))**2)
     obj['PartialPathLength'] = cumsum(obj['SegmentLength'])
     return obj
+
 
 def individual_plots(data):
     rms = lambda x: sqrt(sum(x**2))/len(x)
@@ -42,12 +38,14 @@ def individual_plots(data):
          gg.theme_bw())
     print(g)
 
+
 def open_mdf(mdf_file):
     data = read_mtrackj_mdf(mdf_file)
     return center(data)
 
+
 def main():
-    import sys, argparse
+    import argparse
     parser = argparse.ArgumentParser(description='Make some plots.')
     # parser.add_argument('--individual', '-i', action='store_true')
     parser.add_argument('mdf_file', nargs='1')
@@ -58,6 +56,7 @@ def main():
             individual_plots(data)
     else:
         plot_ensemble(args.mdf_file)
+
 
 if __name__ == '__main__':
     main()

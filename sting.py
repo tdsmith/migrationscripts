@@ -19,12 +19,13 @@ import ggplot as gg
 import pandas as pd
 from numpy import sqrt, sum, array
 
+
 def read_mtrack2(filename):
     with open(filename) as f:
         buf = f.readlines()
     if '\n' in buf:
-       # there might be an extra table at the end that we don't care about
-       buf = buf[:buf.index('\n')]
+        # there might be an extra table at the end that we don't care about
+        buf = buf[:buf.index('\n')]
     buf = ''.join(buf)
     iobuf = StringIO(buf)
     # row 0 is headers and data starts on row 2 so skip row 1
@@ -44,6 +45,7 @@ def read_mtrack2(filename):
     df = df.reset_index()
     return df
 
+
 def read_manual_track(filename):
     df = pd.read_csv(filename, sep='\t', encoding='mac-roman')
     df.rename(columns={u'Track n°': 'Object',
@@ -52,6 +54,7 @@ def read_manual_track(filename):
     for col in ['Object', 'Frame']:
         df[col] = df[col].astype(int)
     return df
+
 
 def read_mtrackj_mdf(filename):
     f = codecs.open(filename, 'r', 'mac-roman')
@@ -70,6 +73,7 @@ def read_mtrackj_mdf(filename):
             frame.append(int(float(tmp[5])))
     return pd.DataFrame({'Object': obj, 'Frame': frame, 'X': x, 'Y': y})
 
+
 def center(df):
     def center_transform(x):
         x['cX'] = x['X'] - x['X'].iloc[0]
@@ -78,6 +82,7 @@ def center(df):
     centered = df.groupby('Object').apply(center_transform)
     centered['cY'] = -centered['cY']
     return centered
+
 
 def displacement_plot(centered, limits=None, style=None):
     style = {} if style is None else style
@@ -99,12 +104,14 @@ def displacement_plot(centered, limits=None, style=None):
             g += gg.geom_point(data=endframe, color='black', size=1)
     return g
 
+
 def segment_lengths(obj):
-    obj.loc[:,'SegmentLength'] = 0
+    obj.loc[:, 'SegmentLength'] = 0
     # use array() to prevent index alignment
     obj['SegmentLength'].iloc[1:] = sqrt((obj['X'].iloc[1:] - array(obj['X'][:-1]))**2 +
                                          (obj['Y'].iloc[1:] - array(obj['Y'][:-1]))**2)
     return obj
+
 
 def stats(df, length_scale=1, time_scale=1):
     rms = lambda x: sqrt(sum(x**2))
@@ -124,6 +131,7 @@ def stats(df, length_scale=1, time_scale=1):
                          'n_points': n_points,
                          'velocity': velocity})
 
+
 def summary(df):
     return pd.DataFrame({'filename': [df['filename'].iloc[0]],
                          'median_rms_dx': [df['rms_displacement'].median()],
@@ -135,6 +143,7 @@ def summary(df):
                          'median_max_dx': [df['max_displacement'].median()],
                          'mean_velocity': [df['velocity'].mean()],
                          'sd_velocity': [df['velocity'].std()]})
+
 
 def main():
     parser = argparse.ArgumentParser(description="Draws displacement plots.",
@@ -173,7 +182,7 @@ def main():
         # there has to be a better pattern for this
         try:
             df = read_mtrackj_mdf(filename)
-        except ValueError as e:
+        except ValueError:
             try:
                 df = read_mtrack2(filename)
             except Exception:
@@ -181,7 +190,7 @@ def main():
         centered = center(df)
         centered.to_csv(filename + '.centered')
         if not args.no_plots:
-            g = displacement_plot(centered, limits = args.limits, style=style)
+            g = displacement_plot(centered, limits=args.limits, style=style)
             g += gg.theme(axis_text=gg.element_text(size=args.plot_text))
             g += gg.labs(x='um', y='um')
             if args.tick_breaks:
@@ -194,15 +203,17 @@ def main():
         centered['filename'] = filename
         all_dfs.append(centered)
     mega_df = pd.concat(all_dfs, ignore_index=True)
+    stats_for = lambda x: stats(x, length_scale=args.pixels_per_micron,
+                                time_scale=args.minutes_per_frame)
     obj_stats = (mega_df.groupby('filename', sort=False)
-                        .apply(lambda x: stats(x, length_scale=args.pixels_per_micron,
-                                                  time_scale=args.minutes_per_frame))
+                        .apply(stats_for)
                         .reset_index())
     summary_by_file = obj_stats.groupby('filename').apply(summary)
     if args.summary:
         summary_by_file.to_csv(args.summary, index=False)
     print("# Produced by {} at {}".format(' '.join(sys.argv), time.ctime()))
-    print("# {} pixels per micron, {} minutes per frame".format(args.pixels_per_micron, args.minutes_per_frame))
+    print("# {} pixels per micron, {} minutes per frame".
+          format(args.pixels_per_micron, args.minutes_per_frame))
     print("# distance units are microns; velocity units are microns/hour")
     obj_stats.to_csv(sys.stdout, index=False)
 
