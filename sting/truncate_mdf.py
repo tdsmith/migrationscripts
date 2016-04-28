@@ -1,6 +1,7 @@
 import codecs
 import argparse
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('n', type=int, help='Keep points from the first n frames')
@@ -15,7 +16,7 @@ def main():
     for line in f:
         if line.startswith("Point"):
             split = line.split()
-            this_frame = int(float(split[-2])) 
+            this_frame = int(float(split[-2]))
             if this_frame <= args.n:
                 print line,
         else:

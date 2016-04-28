@@ -55,7 +55,8 @@ def main():
             data = open_mdf(infile)
             individual_plots(data)
     else:
-        plot_ensemble(args.mdf_file)
+        pass
+        # plot_ensemble(args.mdf_file)
 
 
 if __name__ == '__main__':

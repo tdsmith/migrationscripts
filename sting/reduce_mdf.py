@@ -4,6 +4,7 @@ that would have been produced if the .mdf had originally been sampled every N/R 
 import codecs
 import argparse
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('r', type=int, help='Factor by which to reduce the number of samples')

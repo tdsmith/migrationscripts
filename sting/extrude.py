@@ -10,7 +10,9 @@ import os
 import tifffile as tf
 import numpy as np
 
-def process((filename, outpath, p)):
+
+def process(argtuple):
+    filename, outpath, p = argtuple
     print(p)
     tiff = tf.TiffFile(filename, multifile=True, multifile_close=False)
     serieses = tiff.series
@@ -21,13 +23,14 @@ def process((filename, outpath, p)):
         array = array.astype(np.uint8)
         tw.save(array)
 
+
 def extrude(filename, outpath, jobs=1):
     tiff = tf.TiffFile(filename, multifile=True, multifile_close=False)
     serieses = tiff.series
     os.makedirs(outpath)
     pool = multiprocessing.Pool(jobs)
     pool.map(process, zip([filename]*len(serieses),
-                          [outpath]*len(serieses), 
+                          [outpath]*len(serieses),
                           range(len(serieses))))
     pool.close()
     pool.join()
