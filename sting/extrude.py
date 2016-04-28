@@ -35,7 +35,8 @@ def extrude(filename, outpath, jobs=1):
     pool.close()
     pool.join()
 
-if __name__ == "__main__":
+
+def main():
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input_stack")
@@ -43,3 +44,6 @@ if __name__ == "__main__":
     parser.add_argument("--jobs", "-j", help="Number of cores to use", default=1, type=int)
     args = parser.parse_args()
     extrude(args.input_stack, args.output_path, args.jobs)
+
+if __name__ == "__main__":
+    main()

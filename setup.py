@@ -22,6 +22,12 @@ setup(
     entry_points={
         'console_scripts': [
             'sting = sting.sting:main',
+            'truncate_mdf = sting.truncate_mdf:main',
+            'sting_time_series = sting.time_series:main',
+            'tidycheck_mdf = sting.tidycheck_mdf:main',
+            'reduce_mdf = sting.reduce_mdf:main',
+            'sting_plot_displacement = sting.plot_displacement_per_interval:main',
+            'sting_extrude = sting.extrude:main',
         ],
     },
 )
