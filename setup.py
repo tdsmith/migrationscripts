@@ -18,7 +18,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7',
     ],
-    install_requires=['numpy', 'pandas', 'Pillow', 'tifffile'],
+    install_requires=['numpy', 'lmfit', 'pandas', 'Pillow', 'scipy', 'tifffile'],
     entry_points={
         'console_scripts': [
             'sting = sting.sting:main',
@@ -26,7 +26,7 @@ setup(
             'sting_time_series = sting.time_series:main',
             'tidycheck_mdf = sting.tidycheck_mdf:main',
             'reduce_mdf = sting.reduce_mdf:main',
-            'sting_plot_displacement = sting.plot_displacement_per_interval:main',
+            'sting_random_walk= sting.random_walk:main',
             'sting_extrude = sting.extrude:main',
         ],
     },
