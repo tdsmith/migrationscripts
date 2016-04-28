@@ -1,17 +1,26 @@
+import os
 import unittest
 
+import numpy as np
 import pandas as pd
 import tifffile as tf
 
-from extract_cell import *
+from sting.extract_cell import *
 
 WRITE_OUTPUT = False
 
 
+def fixture(filename):
+    return os.path.join(
+        os.path.dirname(__file__),
+        "test_fixtures",
+        filename)
+
+
 class TestExtractWindow(unittest.TestCase):
     def setUp(self):
-        self.single_page = tf.imread("test_fixtures/single_page.tif")
-        self.multi_page = tf.imread("test_fixtures/multi_page.tif")
+        self.single_page = tf.imread(fixture("single_page.tif"))
+        self.multi_page = tf.imread(fixture("multi_page.tif"))
 
     def test_extract_window(self):
         for i, (x, y) in enumerate(((0, 0), (100, 100), (250, 250))):
@@ -40,7 +49,7 @@ class TestExtractWindow(unittest.TestCase):
         })
         movie = movie_of_cell(
             fake_mdf_1,
-            "test_fixtures/single_page.tif",
+            fixture("single_page.tif"),
             200, 200)
         self.assertIsInstance(movie, np.ndarray)
         self.assertEqual(movie.shape, (1, 200, 200))
@@ -48,7 +57,7 @@ class TestExtractWindow(unittest.TestCase):
         # test the pillow code path
         movie = movie_of_cell(
             fake_mdf_1,
-            ["test_fixtures/single_page.tif"],
+            [fixture("single_page.tif")],
             200, 200)
         self.assertIsInstance(movie, np.ndarray)
         self.assertEqual(movie.shape, (1, 200, 200))
@@ -60,7 +69,7 @@ class TestExtractWindow(unittest.TestCase):
         })
         movie = movie_of_cell(
             fake_mdf_4,
-            "test_fixtures/multi_page.tif",
+            fixture("multi_page.tif"),
             200, 200)
         self.assertIsInstance(movie, np.ndarray)
         self.assertEqual(movie.shape, (4, 200, 200))

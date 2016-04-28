@@ -3,12 +3,12 @@ from __future__ import division
 import os
 
 from PIL import Image
-from numba import jit
+# from numba import jit
 import numpy as np
 import tifffile as tf
 
 
-@jit
+# @jit
 def extract_window(image, x, y, h, w):
     hw, hh = w//2, h//2
     sample = image[max(0, y-hh):y+hh, max(0, x-hw):x+hw]
