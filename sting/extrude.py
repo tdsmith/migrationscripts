@@ -18,7 +18,7 @@ def process(argtuple):
     serieses = tiff.series
     outfn = os.path.join(outpath, "{}.tif".format(p))
     with tf.TiffWriter(outfn) as tw:
-        array = tf.tiffile.stack_pages(serieses[p]['pages'])
+        array = tf.tifffile.stack_pages(serieses[p].pages)
         array >>= 4
         array = array.astype(np.uint8)
         tw.save(array)
