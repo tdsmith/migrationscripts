@@ -37,7 +37,7 @@ def read_mtrack2(filename):
     buf = ''.join(buf)
     iobuf = StringIO(buf)
     # row 0 is headers and data starts on row 2 so skip row 1
-    df = pd.read_csv(iobuf, sep='\t', skiprows=[1])
+    df = pd.read_csv(iobuf, skiprows=[1])
     # df.replace(to_replace=' ', value=float('NaN'), inplace=True)
     df = df.convert_objects(convert_numeric=True)
     # throw out flag columns
@@ -141,7 +141,7 @@ def displacement_plot(centered, limits=None, style=None):
     centered = centered.sort(['Frame', 'Object'])
     g = (gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) +
          gg.geom_path(size=0.3))
-    g += gg.theme_bw() if 'theme-bw' in style else gg.theme_seaborn()
+    g += gg.theme_bw() # if 'theme-bw' in style else gg.theme_seaborn()
     if limits:
         g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     if 'no-terminal-dot' not in style:
@@ -296,8 +296,8 @@ def main():
                 g += gg.scale_y_continuous(breaks=range(*args.tick_breaks))
             if plot_titles is not None and filename in plot_titles.index:
                 g += gg.labs(title=plot_titles.ix[filename, 'title'])
-            gg.ggsave(g, '{}.{}'.format(filename, args.imagetype),
-                      width=args.plot_width, height=args.plot_height, units='in')
+            g.save('{}.{}'.format(filename, args.imagetype),
+                   width=args.plot_width, height=args.plot_height)
         centered['filename'] = filename
         all_dfs.append(centered)
     mega_df = pd.concat(all_dfs, ignore_index=True)
