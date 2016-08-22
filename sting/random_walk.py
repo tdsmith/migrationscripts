@@ -48,7 +48,6 @@ def guess_speed(cell, pixels_per_micron, hours_per_frame):
     # calculate path-length
     cell = segment_lengths(cell)
     len_h = len(cell.index) * hours_per_frame
-    print(cell["PartialPathLength"].iloc[-1] / pixels_per_micron / len_h)
     return cell["PartialPathLength"].iloc[-1] / pixels_per_micron / len_h
 
 
@@ -56,8 +55,8 @@ def fit_model(ms_dx, guess_s, hours_per_frame=5/60):
     fitfunc = lambda T, s, p: (s**2 * p**2) * (T/p - 1 + exp(-T/p))
     n = len(ms_dx)//2
     model = Model(fitfunc)
-    model.set_param_hint('s', value=guess_s, min=0, max=200)
-    model.set_param_hint('p', value=0.5, min=0)
+    model.set_param_hint('s', value=guess_s, min=0, max=150)
+    model.set_param_hint('p', value=0.5, min=0.1)
     T = (arange(len(ms_dx)) + 1) * hours_per_frame
     result = model.fit(ms_dx[:n], T=T[:n])
     return result, (T, result.best_fit)
