@@ -28,6 +28,7 @@ setup(
             'reduce_mdf = sting.reduce_mdf:main',
             'sting_random_walk= sting.random_walk:main',
             'sting_extrude = sting.extrude:main',
+            'sting_extract_metadata = sting.extract_metadata:main'
         ],
     },
 )
