@@ -25,7 +25,8 @@ def process(argtuple):
 
 
 def extrude(filename, outpath, jobs=1):
-    os.makedirs(outpath)
+    if not os.path.exists(outpath):
+        os.makedirs(outpath)
     tiff = tf.TiffFile(filename, multifile=True, multifile_close=False)
     serieses = tiff.series
     pool = multiprocessing.Pool(jobs)
