@@ -17,7 +17,7 @@ import time
 
 import ggplot as gg
 import pandas as pd
-from numpy import sqrt, sum, array
+from numpy import sqrt, sum, array, arctan2
 
 
 def read_mtrack2(filename):
@@ -192,6 +192,7 @@ def stats(df, length_scale=1, time_scale=1):
             path_length: Number of points sampled
             velocity: Velocity, as path length divided by time observed, in
                 µm/hr
+            angle: final angle vs. the origin, in radians
     """
     rms = lambda x: sqrt(sum(x**2))
     df['Distance'] = sqrt(df['cX']**2 + df['cY']**2) / length_scale
@@ -204,11 +205,22 @@ def stats(df, length_scale=1, time_scale=1):
     n_points = per_object['SegmentLength'].aggregate(len)
     last_frame = per_object['Frame'].max()
     velocity = path_length/(last_frame * time_scale / 60.0)
+
+    def compute_angle(obj_df):
+        last_frame = obj_df['Frame'].argmax()
+        return arctan2(
+            obj_df.loc[last_frame, 'cY'],
+            obj_df.loc[last_frame, 'cX']
+        )
+
+    angle = per_object.apply(compute_angle)
     return pd.DataFrame({'rms_displacement': rms_dx,
                          'max_displacement': max_dx,
                          'path_length': path_length,
                          'n_points': n_points,
-                         'velocity': velocity})
+                         'velocity': velocity,
+                         'angle': angle,
+                         })
 
 
 def summary(df):
