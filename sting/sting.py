@@ -141,7 +141,7 @@ def displacement_plot(centered, limits=None, style=None):
     centered = centered.sort(['Frame', 'Object'])
     g = (gg.ggplot(centered, gg.aes(x='cX', y='cY', color='Object')) +
          gg.geom_path(size=0.3))
-    g += gg.theme_bw() # if 'theme-bw' in style else gg.theme_seaborn()
+    g += gg.theme_bw()  # if 'theme-bw' in style else gg.theme_seaborn()
     if limits:
         g = g + gg.ylim(-limits, limits) + gg.xlim(-limits, limits)
     if 'no-terminal-dot' not in style:
@@ -302,7 +302,7 @@ def main():
         if not args.no_plots:
             g = displacement_plot(centered, limits=args.limits, style=style)
             g += gg.theme(axis_text=gg.element_text(size=args.plot_text))
-            g += gg.labs(x='um', y='um')
+            g += gg.labs(x='px', y='px')
             if args.tick_breaks:
                 g += gg.scale_x_continuous(breaks=range(*args.tick_breaks))
                 g += gg.scale_y_continuous(breaks=range(*args.tick_breaks))
@@ -326,6 +326,7 @@ def main():
           format(args.pixels_per_micron, args.minutes_per_frame))
     print("# distance units are microns; velocity units are microns/hour")
     obj_stats.to_csv(sys.stdout, index=False)
+
 
 if __name__ == '__main__':
     main()
