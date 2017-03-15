@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+# encoding:utf8
 
 from __future__ import division, print_function
 import argparse
+from textwrap import dedent
 import sys
 
 from lmfit import Model
@@ -12,7 +14,7 @@ import pandas as pd
 import scipy as sp
 import warnings
 
-from sting import read_mtrackj_mdf, center
+from sting import read_mtrackj_mdf, center, displacement_plot
 from time_series import segment_lengths
 
 
@@ -55,8 +57,9 @@ def fit_model(ms_dx, guess_s, hours_per_frame=5/60):
     fitfunc = lambda T, s, p: (s**2 * p**2) * (T/p - 1 + exp(-T/p))
     n = len(ms_dx)//2
     model = Model(fitfunc)
-    model.set_param_hint('s', value=guess_s, min=0, max=150)
-    model.set_param_hint('p', value=0.5, min=0.1)
+    model.set_param_hint('s', value=guess_s, min=0, max=250)
+    # Constrain persistence time to ≥ 1 minute
+    model.set_param_hint('p', value=0.5, min=1/60.)
     T = (arange(len(ms_dx)) + 1) * hours_per_frame
     result = model.fit(ms_dx[:n], T=T[:n])
     return result, (T, result.best_fit)
@@ -78,13 +81,17 @@ def main():
                         help='Minutes between frames')
     parser.add_argument('--pixels', '-p', default=1.51, type=float,
                         help='Pixels per micron')
+    parser.add_argument('--report', '-r', action='store_true',
+                        help='Write a report')
     parser.add_argument('mdf_file', nargs='+')
     args = parser.parse_args()
-    fit_table = {'Filename': [],
+    fit_table = {'filename': [],
                  'Object': [],
                  's': [],
                  'p': [],
                  'r2': []}
+
+    report_html = []
 
     for mdf_file in args.mdf_file:
         data = open_mdf(mdf_file)
@@ -95,6 +102,7 @@ def main():
         fig, ax = plt.subplots(len(g)//4 + 1, 4, sharex=True, sharey=True,
                                subplotpars=subplotpars)
         for i, (name, group) in enumerate(g):
+            solo_fig, solo_ax = plt.subplots(1, 1)
             if len(group) < 5:
                 warnings.warn(
                     "Skipping object {} in file {}: "
@@ -116,28 +124,86 @@ def main():
                     "alignment error?".format(name, mdf_file),
                     SkippedCellWarning)
                 continue
-            result, (T, best_fit) = fit_model(ms_dx, s_guess)
-            ax.flat[i].plot(T, ms_dx, '.',
-                            T[:len(best_fit)], best_fit, linewidth=5)
+            result, (T, best_fit) = fit_model(ms_dx, s_guess, args.minutes/60.)
             s, p = result.best_values['s'], result.best_values['p']
-            ax.flat[i].set_title(name)
-            ax.flat[i].text(
-                0.05, 0.95, '({:.2f}, {:.2f})'.format(s, p),
-                horizontalalignment='left', verticalalignment='top',
-                transform=ax.flat[i].transAxes)
+            r2, _ = sp.stats.pearsonr(ms_dx[:len(best_fit)], best_fit)
 
-            fit_table['Filename'].append(mdf_file)
+            axes = [ax.flat[i]]
+            if args.report:
+                axes.append(solo_ax)
+
+            for axis in axes:
+                axis.plot(T, ms_dx, '.',
+                          T[:len(best_fit)], best_fit, linewidth=5)
+                axis.set_title(name)
+                axis.text(
+                    0.05, 0.95, '({:.2f}, {:.2f})'.format(s, p),
+                    horizontalalignment='left', verticalalignment='top',
+                    transform=axis.transAxes)
+
+            if args.report:
+                solo_filename = "{}-{}-rw_fit.png".format(mdf_file, i)
+                solo_fig.set_size_inches(3, 3)
+                solo_fig.savefig(solo_filename)
+                displacement_filename = "{}-{}-rw_displacement.png".format(mdf_file, i)
+                g = displacement_plot(group, limits=300)
+                g.save(displacement_filename, 3, 3)
+                plt.close(g.fig)
+                report_html.append(dedent(
+                    """
+                    <p>{filename}:{object}</p>
+                    <p>s: <span style="{s_style}">{s:.3f}</span> (v: {velocity:.3f}),<br>
+                       p<sub>min</sub>: <span style="{p_style}">{p:.1f}</span>,<br>
+                       r<sup>2</sup>: <span style="{r_style}">{r2:.3f}</span></p>
+                    <table><tr>
+                    <td><img src="{displacement_filename}"></td>
+                    <td><img src="{solo_filename}"><td>
+                    </tr></table>
+                    """.format(**{
+                        "filename": mdf_file,
+                        "object": name,
+                        "s_style": "color: red" if s >= 249.9 else "",
+                        "s": s,
+                        "p_style": "color: red" if p < 0.018 else "",
+                        "p": p * 60,
+                        "r_style": "color: red" if r2 < 0.95 else "",
+                        "r2": r2,
+                        "velocity": s_guess,
+                        "displacement_filename": displacement_filename,
+                        "solo_filename": solo_filename,
+                    })
+                ))
+
+            fit_table['filename'].append(mdf_file)
             fit_table['Object'].append(name)
             fit_table['s'].append(s)
             fit_table['p'].append(p)
-            r2, _ = sp.stats.pearsonr(ms_dx[:len(best_fit)], best_fit)
             fit_table['r2'].append(r2)
+
+            plt.close(solo_fig)
 
         fig.savefig("{}-rw_fit.{}".format(mdf_file, args.imagetype))
         plt.close(fig)
 
+    if args.report:
+        head = dedent(
+            """
+            <html>
+            """)
+        footer = dedent(
+            """
+            </html>
+            """
+        )
+        body = "\n<hr>\n".join(report_html)
+        with open("report.html", "w") as f:
+            f.write(head)
+            f.write(body)
+            f.write(footer)
+
     df = pd.DataFrame(fit_table)
     sys.stdout.write(df.to_csv(index=False))
+
 
 if __name__ == '__main__':
     main()
