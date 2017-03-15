@@ -18,7 +18,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7',
     ],
-    install_requires=['numpy', 'lmfit', 'pandas', 'Pillow', 'scipy', 'tifffile'],
+    install_requires=['numpy', 'lmfit', 'pandas', 'Pillow', 'scipy', 'tifffile', 'ggplot'],
     entry_points={
         'console_scripts': [
             'sting = sting.sting:main',
